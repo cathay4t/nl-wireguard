@@ -7,10 +7,9 @@ use netlink_packet_core::{
     NLM_F_REQUEST,
 };
 use netlink_packet_generic::GenlMessage;
+use netlink_packet_wireguard::{WireguardCmd, WireguardMessage};
 
-use crate::{
-    ErrorKind, WireguardCmd, WireguardError, WireguardMessage, WireguardParsed,
-};
+use crate::{ErrorKind, WireguardError, WireguardParsed};
 
 #[derive(Clone, Debug)]
 pub struct WireguardHandle {

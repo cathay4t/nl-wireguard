@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use netlink_packet_wireguard::WireguardDeviceFlags;
-
-use crate::{
-    ErrorKind, WireguardAttribute, WireguardCmd, WireguardError,
-    WireguardMessage, WireguardPeerParsed,
+use netlink_packet_wireguard::{
+    WireguardAttribute, WireguardCmd, WireguardDeviceFlags, WireguardMessage,
 };
+
+use crate::{ErrorKind, WireguardError, WireguardPeerParsed};
 
 #[derive(Clone, PartialEq, Eq, Default)]
 #[non_exhaustive]

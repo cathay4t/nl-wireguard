@@ -7,14 +7,14 @@ use std::{
 };
 
 use base64::{prelude::BASE64_STANDARD, Engine};
-use netlink_packet_wireguard::{WireguardAllowedIpFlags, WireguardPeerFlags};
+use netlink_packet_wireguard::{
+    WireguardAddressFamily, WireguardAllowedIp, WireguardAllowedIpAttr,
+    WireguardAllowedIpFlags, WireguardPeer, WireguardPeerAttribute,
+    WireguardPeerFlags, WireguardTimeSpec,
+};
 
 use super::parsed::decode_key;
-use crate::{
-    ErrorKind, WireguardAddressFamily, WireguardAllowedIp,
-    WireguardAllowedIpAttr, WireguardError, WireguardPeer,
-    WireguardPeerAttribute, WireguardTimeSpec,
-};
+use crate::{ErrorKind, WireguardError};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[non_exhaustive]

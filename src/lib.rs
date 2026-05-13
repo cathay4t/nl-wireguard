@@ -74,14 +74,6 @@ mod handle;
 mod parsed;
 mod peer_parsed;
 
-// Re-export netlink-packet-wireguard data types allowing crate use to
-// depend on this crate only for full functionality.
-pub use netlink_packet_wireguard::{
-    WireguardAddressFamily, WireguardAllowedIp, WireguardAllowedIpAttr,
-    WireguardAttribute, WireguardCmd, WireguardMessage, WireguardPeer,
-    WireguardPeerAttribute, WireguardTimeSpec,
-};
-
 #[cfg(feature = "tokio_socket")]
 pub use self::connection::new_connection;
 pub use self::{
