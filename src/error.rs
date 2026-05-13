@@ -2,8 +2,7 @@
 
 use netlink_packet_core::NetlinkMessage;
 use netlink_packet_generic::GenlMessage;
-
-use crate::WireguardMessage;
+use netlink_packet_wireguard::WireguardMessage;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum ErrorKind {
