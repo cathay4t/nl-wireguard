@@ -170,12 +170,11 @@ impl From<Vec<WireguardMessage>> for WireguardParsed {
                         );
                     }
                     WireguardAttribute::Flags(flag_bits) => {
-                        let mut flags = Vec::new();
-                        for flag_bit in flag_bits.iter() {
-                            flags.push(WireguardParsedDeviceFlags::from(flag_bit));
-                        }
-
-                        ret.flags = Some(flags);
+                        ret.flags.get_or_insert_with(Vec::new).extend(
+                            flag_bits
+                                .iter()
+                                .map(WireguardParsedDeviceFlags::from),
+                        );
                     }
                     _ => {
                         log::debug!("Unsupported WireguardAttribute {attr:?}");
