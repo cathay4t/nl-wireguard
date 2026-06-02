@@ -145,6 +145,41 @@ impl From<WireguardMessage> for WireguardParsed {
     }
 }
 
+impl From<Vec<WireguardMessage>> for WireguardParsed {
+    fn from(msgs: Vec<WireguardMessage>) -> Self {
+        let mut ret = Self::default();
+
+        for msg in msgs {
+            for attr in msg.attributes {
+                match attr {
+                    WireguardAttribute::IfName(v) => ret.iface_name = Some(v),
+                    WireguardAttribute::IfIndex(v) => ret.iface_index = Some(v),
+                    WireguardAttribute::PrivateKey(v) => {
+                        ret.private_key = Some(BASE64_STANDARD.encode(v))
+                    }
+                    WireguardAttribute::PublicKey(v) => {
+                        ret.public_key = Some(BASE64_STANDARD.encode(v))
+                    }
+                    WireguardAttribute::ListenPort(v) => {
+                        ret.listen_port = Some(v)
+                    }
+                    WireguardAttribute::Fwmark(v) => ret.fwmark = Some(v),
+                    WireguardAttribute::Peers(peers) => {
+                        ret.peers.get_or_insert_with(Vec::new).extend(
+                            peers.into_iter().map(WireguardPeerParsed::from),
+                        );
+                    }
+                    _ => {
+                        log::debug!("Unsupported WireguardAttribute {attr:?}");
+                    }
+                }
+            }
+        }
+
+        ret
+    }
+}
+
 impl WireguardParsed {
     /// Build [WireguardMessage]
     pub fn build(

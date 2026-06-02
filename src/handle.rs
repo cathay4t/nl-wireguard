@@ -30,19 +30,26 @@ impl WireguardHandle {
             ..Default::default()
         }
         .build(WireguardCmd::GetDevice)?;
-        match self
+
+        let mut msgs: Vec<WireguardMessage> = Vec::new();
+
+        let mut stream = self
             .request(NLM_F_REQUEST | NLM_F_ACK | NLM_F_DUMP, msg.clone())
-            .await?
-            .next()
-            .await
-        {
-            None => Err(WireguardError::new(
+            .await?;
+
+        while let Some(reply) = stream.next().await {
+            msgs.push(reply?);
+        }
+
+        if msgs.is_empty() {
+            return Err(WireguardError::new(
                 ErrorKind::Bug,
                 "Got no reply from kernel for request".to_string(),
                 Some(NetlinkMessage::from(GenlMessage::from_payload(msg))),
-            )),
-            Some(reply) => reply.map(WireguardParsed::from),
+            ));
         }
+
+        Ok(msgs.into())
     }
 
     pub async fn set(
