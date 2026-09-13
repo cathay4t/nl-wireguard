@@ -209,6 +209,23 @@ impl From<WireguardPeer> for WireguardPeerParsed {
 }
 
 impl WireguardPeerParsed {
+    /// Create a peer entry which removes the peer holding `public_key` from
+    /// the device it is applied to.
+    ///
+    /// The entry holds the [WireguardParsedPeerFlags::RemoveMe] flag, the
+    /// kernel ignores the other properties of a peer which is removed.
+    /// Apply it with [crate::WireguardHandle::set], use
+    /// [crate::WireguardHandle::remove_peer] to remove one peer with a
+    /// single call. Removing a peer which the device does not hold is not
+    /// an error.
+    pub fn remove(public_key: &str) -> Self {
+        WireguardPeerParsed {
+            public_key: Some(public_key.to_string()),
+            flags: Some(vec![WireguardParsedPeerFlags::RemoveMe]),
+            ..Default::default()
+        }
+    }
+
     /// Merge a continuation of this peer which the kernel sent in a
     /// following message.
     ///
@@ -545,6 +562,37 @@ mod tests {
         let err = WireguardPeerParsed::default().build().unwrap_err();
 
         assert_eq!(err.kind, ErrorKind::InvalidInput);
+    }
+
+    #[test]
+    fn removal_peer_holds_public_key_and_remove_me_flag() {
+        let peer = WireguardPeerParsed::remove(PEER_PUBLIC_KEY)
+            .build()
+            .unwrap();
+
+        assert_eq!(peer.0.len(), 2);
+        match &peer.0[0] {
+            WireguardPeerAttribute::PublicKey(key) => assert_eq!(
+                key.as_slice(),
+                BASE64_STANDARD.decode(PEER_PUBLIC_KEY).unwrap()
+            ),
+            attr => panic!("unexpected attribute {attr:?}"),
+        }
+        match &peer.0[1] {
+            WireguardPeerAttribute::Flags(flags) => {
+                assert_eq!(*flags, WireguardPeerFlags::RemoveMe);
+            }
+            attr => panic!("unexpected attribute {attr:?}"),
+        }
+    }
+
+    #[test]
+    fn removal_peer_rejects_an_invalid_public_key() {
+        let key = "not base64!";
+        let err = WireguardPeerParsed::remove(key).build().unwrap_err();
+
+        assert_eq!(err.kind, ErrorKind::InvalidKey);
+        assert!(!err.msg.contains(key));
     }
 
     #[test]
