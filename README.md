@@ -71,12 +71,30 @@ async fn set_wireguard_config(
 }
 ```
 
+## Remove a wireguard peer
+
+```rust
+async fn remove_wireguard_peer(
+    iface_name: &str,
+    public_key: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (conn, mut handle, _) = nl_wireguard::new_connection()?;
+    tokio::spawn(conn);
+
+    handle.remove_peer(iface_name, public_key).await?;
+    Ok(())
+}
+```
+
 ## Notes
 
 - `WireguardParsedDeviceFlags::ReplacePeers` and
   `WireguardParsedPeerFlags::ReplaceAllowedIps` replace the existing
   configuration instead of appending to it, without them repeated runs of
   the example add the peers and allowed IPs again.
+- `WireguardHandle::remove_peer()` removes one peer, a list of
+  `WireguardPeerParsed::remove()` entries passed to `WireguardHandle::set()`
+  removes several peers in one request.
 - `WireguardParsed` and `WireguardPeerParsed` are `#[non_exhaustive]`, so
   they can not be built with a struct literal outside of this crate. Use
   `Default::default()` and assign the properties instead.

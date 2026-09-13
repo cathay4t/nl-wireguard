@@ -72,6 +72,21 @@
 //! }
 //! ```
 //!
+//! To remove a wireguard peer, only its public key is needed, the other
+//! peers of the interface keep their configuration.
+//!
+//! ```no_run
+//! async fn remove_wireguard_peer(
+//!     iface_name: &str,
+//!     public_key: &str,
+//! ) -> Result<(), Box<dyn std::error::Error>> {
+//!     let (conn, mut handle, _) = nl_wireguard::new_connection()?;
+//!     tokio::spawn(conn);
+//!     handle.remove_peer(iface_name, public_key).await?;
+//!     Ok(())
+//! }
+//! ```
+//!
 //! `WireguardParsedDeviceFlags::ReplacePeers` and
 //! `WireguardParsedPeerFlags::ReplaceAllowedIps` make repeated runs of the
 //! example replace the existing configuration instead of appending to it.

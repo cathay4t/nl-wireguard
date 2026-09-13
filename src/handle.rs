@@ -11,7 +11,7 @@ use netlink_packet_core::{
 use netlink_packet_generic::GenlMessage;
 use netlink_packet_wireguard::{WireguardCmd, WireguardMessage};
 
-use crate::{ErrorKind, WireguardError, WireguardParsed};
+use crate::{ErrorKind, WireguardError, WireguardParsed, WireguardPeerParsed};
 
 #[derive(Clone, Debug)]
 pub struct WireguardHandle {
@@ -96,6 +96,26 @@ impl WireguardHandle {
         }
 
         Ok(())
+    }
+
+    /// Remove the peer holding `public_key` from the wireguard interface
+    /// named `iface_name`.
+    ///
+    /// `public_key` is the base64 encoded public key of the peer, as
+    /// [WireguardHandle::get_by_name] reports it. The other peers of the
+    /// interface keep their configuration and removing a peer which the
+    /// interface does not hold is not an error.
+    pub async fn remove_peer(
+        &mut self,
+        iface_name: &str,
+        public_key: &str,
+    ) -> Result<(), WireguardError> {
+        let config = WireguardParsed {
+            iface_name: Some(iface_name.to_string()),
+            peers: Some(vec![WireguardPeerParsed::remove(public_key)]),
+            ..Default::default()
+        };
+        self.set(config).await
     }
 
     /// Sending arbitrary [WireguardMessage] message and manually handle

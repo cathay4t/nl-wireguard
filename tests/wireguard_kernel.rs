@@ -35,8 +35,16 @@ const IFACE_NAME: &str = "nlwgtest0";
 /// Every test uses its own interface so that they can run in parallel.
 const LARGE_IFACE_NAME: &str = "nlwgtest1";
 
+/// Interface used by `remove_peer_removes_only_the_selected_peer()`.
+const REMOVE_IFACE_NAME: &str = "nlwgtest2";
+
 /// Base64 encoded public key of a throwaway peer.
 const PEER_PUBLIC_KEY: &str = "8bdQrVLqiw3ZoHCucNh1YfH0iCWuyStniRr8t7H24Fk=";
+
+/// Base64 encoded public key of the peer which outlives the peer holding
+/// [`PEER_PUBLIC_KEY`].
+const OTHER_PEER_PUBLIC_KEY: &str =
+    "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=";
 
 /// Base64 encoded private key of the throwaway device.
 const DEVICE_PRIVATE_KEY: &str = "6LTHiAM4vgKEgi5vm30f/EBIEWFDmySkTc9EWCcIqEs=";
@@ -116,6 +124,20 @@ fn peer_with_allowed_ips(count: u32) -> WireguardPeerParsed {
             })
             .collect(),
     );
+    peer
+}
+
+fn peer_with_allowed_ip(
+    public_key: &str,
+    ip_addr: IpAddr,
+) -> WireguardPeerParsed {
+    let mut peer = WireguardPeerParsed::default();
+    peer.public_key = Some(public_key.to_string());
+    peer.allowed_ips = Some(vec![WireguardIpAddress {
+        ip_addr,
+        prefix_length: 32,
+        flags: None,
+    }]);
     peer
 }
 
@@ -232,4 +254,80 @@ async fn keys_are_not_reported_in_errors() {
     // The keys are redacted.
     assert!(!report.contains(&byte_list(&key_bytes(DEVICE_PRIVATE_KEY))));
     assert!(!report.contains(&byte_list(&key_bytes(PRESHARED_KEY))));
+}
+
+#[tokio::test]
+#[ignore = "needs root and the wireguard kernel module"]
+async fn remove_peer_removes_only_the_selected_peer() {
+    let _iface = TestIface::create(REMOVE_IFACE_NAME);
+    let mut handle = connect().await;
+
+    let mut config = WireguardParsed::default();
+    config.iface_name = Some(REMOVE_IFACE_NAME.to_string());
+    config.private_key = Some(DEVICE_PRIVATE_KEY.to_string());
+    config.peers = Some(vec![
+        peer_with_allowed_ip(
+            PEER_PUBLIC_KEY,
+            IpAddr::V4(Ipv4Addr::new(10, 213, 1, 1)),
+        ),
+        peer_with_allowed_ip(
+            OTHER_PEER_PUBLIC_KEY,
+            IpAddr::V4(Ipv4Addr::new(10, 213, 1, 2)),
+        ),
+    ]);
+    handle.set(config).await.expect("failed to apply config");
+
+    handle
+        .remove_peer(REMOVE_IFACE_NAME, PEER_PUBLIC_KEY)
+        .await
+        .expect("failed to remove the peer");
+
+    let parsed = handle
+        .get_by_name(REMOVE_IFACE_NAME)
+        .await
+        .expect("failed to get config");
+    let peers = parsed.peers.as_ref().expect("no peer parsed");
+    assert_eq!(peers.len(), 1);
+    assert_eq!(peers[0].public_key.as_deref(), Some(OTHER_PEER_PUBLIC_KEY));
+    // The allowed IP of the removed peer is gone as well.
+    assert_eq!(allowed_ip_count(&parsed), 1);
+
+    // Removing a peer which the device does not hold is not an error and
+    // leaves the other peers alone.
+    handle
+        .remove_peer(REMOVE_IFACE_NAME, PEER_PUBLIC_KEY)
+        .await
+        .expect("removing a missing peer should not fail");
+    let parsed = handle
+        .get_by_name(REMOVE_IFACE_NAME)
+        .await
+        .expect("failed to get config");
+    assert_eq!(parsed.peers.as_ref().map(Vec::len), Some(1));
+
+    // Several peers are removed by one request when their removal entries
+    // are applied together.
+    let mut config = WireguardParsed::default();
+    config.iface_name = Some(REMOVE_IFACE_NAME.to_string());
+    config.peers = Some(vec![peer_with_allowed_ip(
+        PEER_PUBLIC_KEY,
+        IpAddr::V4(Ipv4Addr::new(10, 213, 1, 1)),
+    )]);
+    handle.set(config).await.expect("failed to apply config");
+
+    let mut config = WireguardParsed::default();
+    config.iface_name = Some(REMOVE_IFACE_NAME.to_string());
+    config.peers = Some(vec![
+        WireguardPeerParsed::remove(PEER_PUBLIC_KEY),
+        WireguardPeerParsed::remove(OTHER_PEER_PUBLIC_KEY),
+    ]);
+    handle
+        .set(config)
+        .await
+        .expect("failed to remove the peers");
+
+    let parsed = handle
+        .get_by_name(REMOVE_IFACE_NAME)
+        .await
+        .expect("failed to get config");
+    assert_eq!(parsed.peers.iter().flatten().count(), 0);
 }
