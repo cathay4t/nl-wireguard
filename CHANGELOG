@@ -1,4 +1,22 @@
 # Changelog
+## [0.3.0] - 2026-09-14
+### Breaking changes
+ - API break: mark `ErrorKind` as `#[non_exhaustive]`. (4680ff0)
+
+### New features
+ - Add API to remove a wireguard peer. (6bb8874)
+
+### Bug fixes
+ - fix: enforce `IFNAMSIZ` for interface names. (749881e)
+ - fix: never attach a raw kernel echo to errors. (df1db24)
+ - fix: validate peer keys and allowed IP prefixes. (421030d)
+ - fix: handle netlink acknowledgements and dump results. (14c2c99)
+ - fix: reject out of range last handshake time. (0abc6f2)
+ - fix: never report key material in errors. (34a87a9)
+ - fix: coalesce peers split over several dump replies. (0fe1a35)
+ - fix: split large configuration over several messages. (496ee96)
+ - fix: apply `get_by_name()` result back with `set()`. (5edc23d)
+
 ## [0.2.0] - 2026-08-18
 ### Breaking changes
  - Use latest rust-netlink crates. (e85cafc)
