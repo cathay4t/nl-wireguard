@@ -86,6 +86,34 @@ async fn remove_wireguard_peer(
 }
 ```
 
+## Remove multiple wireguard peers
+
+Build one `WireguardPeerParsed::remove()` entry per public key and apply
+them together with `WireguardHandle::set()`:
+
+```rust
+use nl_wireguard::{WireguardParsed, WireguardPeerParsed};
+
+async fn remove_wireguard_peers(
+    iface_name: &str,
+    public_keys: &[&str],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let peers = public_keys
+        .iter()
+        .map(|public_key| WireguardPeerParsed::remove(public_key))
+        .collect();
+
+    let mut config = WireguardParsed::default();
+    config.iface_name = Some(iface_name.to_string());
+    config.peers = Some(peers);
+
+    let (conn, mut handle, _) = nl_wireguard::new_connection()?;
+    tokio::spawn(conn);
+    handle.set(config).await?;
+    Ok(())
+}
+```
+
 ## Notes
 
 - `WireguardParsedDeviceFlags::ReplacePeers` and
